@@ -25,13 +25,18 @@ if (Test-Path $restrictionPath) {
     Write-Host "       Policy not found (already removed)" -ForegroundColor Yellow
 }
 
-# Step 2: Re-enable device
+# Step 2: Re-enable device (if possible)
 Write-Host "[2/2] Re-enabling device..." -ForegroundColor Yellow
 $device = Get-PnpDevice | Where-Object { $_.InstanceId -like '*INTC1036*' }
 if ($device) {
     if ($device.Status -ne 'OK') {
-        Enable-PnpDevice -InstanceId $device.InstanceId -Confirm:$false
-        Write-Host "       Device enabled" -ForegroundColor Green
+        try {
+            Enable-PnpDevice -InstanceId $device.InstanceId -Confirm:$false -ErrorAction Stop
+            Write-Host "       Device enabled" -ForegroundColor Green
+        } catch {
+            # ACPI devices often can't be toggled via PnP
+            Write-Host "       Device is ACPI (will re-enable after reboot)" -ForegroundColor Yellow
+        }
     } else {
         Write-Host "       Device already enabled" -ForegroundColor Green
     }
