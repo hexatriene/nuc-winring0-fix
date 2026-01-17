@@ -84,6 +84,35 @@ sc.exe query NucSoftwareStudioService
 # (Run scripts/diagnose.ps1 for full status)
 ```
 
+## Validation Testing
+
+### GPO Block vs Windows Update (Tested 2025-01-17)
+
+**Scenario:** Verify that the Group Policy device block (Option A) survives Windows Update attempting to install the vulnerable driver.
+
+**Test procedure:**
+1. Applied GPO block for `ACPI\INTC1036` (device disabled)
+2. Removed broad Windows Update driver exclusion registry (normal update behavior)
+3. Unhid "Intel Corporation - Extension - 1.0.0.38" in Windows Update
+4. Allowed Windows Update to download and install the package
+5. Rebooted system
+
+**Results:**
+| Check | Result |
+|-------|--------|
+| NucSoftwareStudioService | Not found (good) |
+| Driver store | `performancedriverextension.inf` staged as `oem17.inf` |
+| OpenHardwareMonitorLib.sys | Not extracted (good) |
+| Device INTC1036 | **Disabled** - GPO held |
+| GPO block registry | Active |
+
+**Conclusion:** The GPO device block is the effective protection layer. Windows Update can stage the driver package to the driver store, but it **cannot activate** because the hardware ID is blocked. The vulnerable `.sys` file is never extracted or loaded.
+
+**Recommended configuration:**
+- ✓ GPO device block for `ACPI\INTC1036` — Keep (actual protection)
+- ✓ Hide Intel extension via wushowhide — Recommended (prevents repeated staging)
+- ✗ Broad driver exclusion registry — Not needed (interferes with legitimate updates)
+
 ## Reverting Changes
 
 ### To re-enable the device:
