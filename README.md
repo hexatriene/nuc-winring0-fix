@@ -28,10 +28,6 @@ The vulnerable extension hooks into this base driver. Windows Update sees the de
 
 This disables the ACPI device entirely via Group Policy, preventing any drivers from loading.
 
-**Trade-offs:**
-- Lose software fan/LED control (BIOS defaults still work)
-- Most secure - eliminates the attack surface entirely
-
 Run `scripts/disable-device-gpo.ps1` as Administrator, or manually:
 
 ```powershell
@@ -138,6 +134,27 @@ Testing demonstrated that blocking `ACPI\INTC1036` via Group Policy prevents the
 - ✗ Complex driver store monitoring — Not needed, blocked drivers cannot activate
 
 The simplicity of this approach is its strength: a single registry-based device block provides complete protection without interfering with normal Windows Update functionality for other devices.
+
+## What You Lose (and What Still Works)
+
+When the Intel NUC Performance Driver device (`ACPI\INTC1036`) is disabled:
+
+**No longer available:**
+- Intel NUC Software Studio application
+- Software-controlled fan curves (custom profiles via Windows)
+- Software-controlled LED/RGB customization
+- Windows-based thermal monitoring via Intel tools
+- Any third-party apps that depend on this driver for NUC-specific features
+
+**Still works normally:**
+- BIOS-configured fan profiles (set in BIOS, runs independently)
+- BIOS-configured LED settings
+- Hardware thermal protection (CPU throttling, emergency shutdown)
+- All other system functions, Windows Update, other drivers
+- Standard Windows temperature monitoring (Task Manager, other tools)
+
+**Why this is acceptable for most users:**
+The NUC Performance Driver primarily enables *software customization* of fan/LED behavior. The BIOS provides default profiles that work without any Windows driver. Most users set fan curves once in BIOS and never touch them again. If you require dynamic Windows-based fan control (e.g., gaming profiles that switch automatically), Option A may not be suitable—consider Option B instead.
 
 ## Reverting Changes
 
