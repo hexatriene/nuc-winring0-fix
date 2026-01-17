@@ -97,7 +97,7 @@ sc.exe query NucSoftwareStudioService
 4. Allowed Windows Update to download and install the package
 5. Rebooted system
 
-**Results:**
+**Results after Windows Update installed the package:**
 | Check | Result |
 |-------|--------|
 | NucSoftwareStudioService | Not found (good) |
@@ -106,12 +106,38 @@ sc.exe query NucSoftwareStudioService
 | Device INTC1036 | **Disabled** - GPO held |
 | GPO block registry | Active |
 
-**Conclusion:** The GPO device block is the effective protection layer. Windows Update can stage the driver package to the driver store, but it **cannot activate** because the hardware ID is blocked. The vulnerable `.sys` file is never extracted or loaded.
+**Key finding:** The GPO device block is the effective protection layer. Windows Update can stage the driver package to the driver store, but it **cannot activate** because the hardware ID is blocked. The vulnerable `.sys` file is never extracted or loaded.
 
-**Recommended configuration:**
-- ✓ GPO device block for `ACPI\INTC1036` — Keep (actual protection)
-- ✓ Hide Intel extension via wushowhide — Recommended (prevents repeated staging)
-- ✗ Broad driver exclusion registry — Not needed (interferes with legitimate updates)
+### Complete Cleanup (Tested 2025-01-17)
+
+After confirming the GPO block held, completed full cleanup:
+
+1. Removed staged driver from store: `pnputil /delete-driver oem17.inf`
+2. Hid Intel extension update via `wushowhide.diagcab`
+
+**Final verified state:**
+| Component | Status |
+|-----------|--------|
+| NucSoftwareStudioService | Not found ✓ |
+| Driver store (performancedriverextension.inf) | Clean ✓ |
+| OpenHardwareMonitorLib.sys | Not present ✓ |
+| Intel NUC Performance Driver device | Disabled ✓ |
+| Group Policy device block | Active (INTC1036 blocked) ✓ |
+| Intel extension update | Hidden ✓ |
+
+## Recommendation
+
+> **The hardware ID block alone is sufficient protection.**
+
+Testing demonstrated that blocking `ACPI\INTC1036` via Group Policy prevents the vulnerable driver from ever loading, even when Windows Update successfully downloads and stages the driver package. The service executable and `.sys` file are never extracted because the target device is disabled.
+
+**Recommended minimal configuration:**
+- ✓ **GPO device block for `ACPI\INTC1036`** — This is the only required protection
+- ✓ Hide Intel extension via wushowhide — Optional, prevents repeated download/staging
+- ✗ Broad driver exclusion registry — Not needed, interferes with legitimate driver updates
+- ✗ Complex driver store monitoring — Not needed, blocked drivers cannot activate
+
+The simplicity of this approach is its strength: a single registry-based device block provides complete protection without interfering with normal Windows Update functionality for other devices.
 
 ## Reverting Changes
 
